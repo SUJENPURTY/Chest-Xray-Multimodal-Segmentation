@@ -1,0 +1,8 @@
+# All seven research notebooks; no frontend or test framework required.
+-r requirements-research.txt
+nbformat>=5.10,<6
+ipykernel>=6.29,<7
+nbclient>=0.10,<0.12
+nbconvert>=7,<8
+jupyter-client>=8,<9
+ipywidgets>=8,<9

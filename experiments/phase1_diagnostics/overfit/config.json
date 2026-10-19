@@ -1,0 +1,22 @@
+{
+  "seed": 2026,
+  "sample_count": 8,
+  "microbatch": 1,
+  "accumulation": 8,
+  "max_microsteps": 2000,
+  "maximum_optimizer_updates": 250,
+  "max_wall_seconds": 1800,
+  "augmentation": false,
+  "precision": "FP32",
+  "vision_lr": 3e-05,
+  "decoder_lr": 0.0003,
+  "weight_decay": 0.01,
+  "gradient_clip_l2": 1.0,
+  "text_backbone_eval_during_training": true,
+  "decoder_batchnorm": "training mode; microbatch statistics",
+  "evaluation_threshold": 0.5,
+  "success_macro_dice": 0.9,
+  "early_stop_plateau_checks": 6,
+  "minimum_microsteps_before_plateau_stop": 640,
+  "status": "training subset sanity test, not a generalization experiment"
+}

@@ -1,0 +1,4 @@
+# Flask application runtime. Choose your platform's PyTorch build first.
+-r requirements-core.txt
+Flask>=3.1,<4
+waitress>=3.0.2,<4

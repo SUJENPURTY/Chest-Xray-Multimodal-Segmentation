@@ -1,0 +1,3 @@
+# Preserve exact research and restoration bytes across platforms.
+# Do not normalize retained files merely for publication.
+* -text

@@ -1,0 +1,4 @@
+# Optional original epoch-18 Streamlit app; preserved, not retired.
+-r requirements-core.txt
+streamlit>=1.46,<2
+matplotlib>=3.5,<4

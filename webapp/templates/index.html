@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a111d">
+  <title>Chest X-ray Multimodal Segmentation</title>
+  <link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body data-max-upload-mb="{{ '%g'|format(max_upload_mb) }}" data-max-image-bytes="{{ max_image_bytes }}">
+  <svg class="icon-definitions" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m-4 4 4-4 4 4M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-7 5 8"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/></symbol>
+  </svg>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#workspace" aria-label="Chest X-ray segmentation home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5 9V5h5m12 0h5v5M5 23v4h5m12 0h5v-5M8 16h5l3-7 3 14 3-7h3"/></svg></span>
+        <span><strong>Chest X-ray Multimodal Segmentation</strong><span class="brand-subtitle">Vision-Language Guided Medical Image Segmentation</span></span>
+      </a>
+      <nav aria-label="Main navigation"><a class="nav-active" href="#workspace">Workspace</a><a href="#method">Method</a><span class="research-tag">Research demonstration</span></nav>
+    </div>
+  </header>
+  <main class="shell" id="workspace">
+    <section class="intro" aria-labelledby="page-title">
+      <div><p class="eyebrow"><span class="tiny-line"></span> PHASE 02 <span class="eyebrow-divider">/</span> INFERENCE WORKSPACE</p>
+        <h1 id="page-title">See the image.<br><span>Guide the segmentation.</span></h1>
+        <p class="intro-copy">Explore text-guided infection segmentation with the preserved<br class="desktop-break"> Phase-2 vision-language model.</p>
+      </div>
+      <div class="intro-aside"><span class="session-label"><svg class="icon"><use href="#i-shield"/></svg> Local research session</span><p>Your image. Your prompt.<br>One reproducible inference pipeline.</p></div>
+    </section>
+
+    <div class="workspace-bar"><span><span class="live-dot"></span> SEGMENTATION WORKSPACE</span><span class="model-pill" id="model-pill" data-state="checking"><span class="status-dot"></span><span id="model-label">Checking model</span></span></div>
+
+    <div class="workspace-grid">
+      <aside class="inputs-column" aria-label="Prediction inputs">
+        <form id="prediction-form" class="panel input-panel">
+          <div class="section-heading"><span class="step-number">01</span><div><h2>Chest X-ray</h2><p>Start with a grayscale image</p></div></div>
+          <input id="image-input" name="image" type="file" accept=".png,.jpg,.jpeg" class="visually-hidden">
+          <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="Upload a grayscale chest X-ray">
+            <div id="upload-placeholder"><span class="upload-icon"><svg class="icon"><use href="#i-upload"/></svg></span><strong>Drop your X-ray here</strong><span>or <span class="text-link">browse files</span></span><small>Grayscale PNG or JPEG · Up to {{ '%g'|format(max_upload_mb) }} MiB</small></div>
+            <img id="input-preview" alt="Selected chest X-ray preview" hidden>
+          </div>
+          <div id="file-details" class="file-details" hidden><span id="file-name"></span><button id="remove-image" type="button" class="icon-button" aria-label="Remove image"><svg class="icon"><use href="#i-close"/></svg></button></div>
+          <p class="field-note">Single-channel images preserve the validated preprocessing.</p>
+          <div class="section-heading prompt-heading"><span class="step-number">02</span><div><label for="prompt"><strong>Segmentation prompt</strong></label><p>Describe the finding and its location</p></div></div>
+          <textarea id="prompt" name="prompt" rows="4" maxlength="4000" placeholder="e.g. Bilateral pulmonary infection, all left lung and all right lung." required></textarea>
+          <div class="prompt-meta"><span>Medical text guidance</span><span id="character-count">0 / 4,000</span></div>
+          <div class="example-prompts"><span>Try a prompt</span><button type="button" data-prompt="Bilateral pulmonary infection, two infected areas, all left lung and all right lung.">Bilateral infection <span>↗</span></button><button type="button" data-prompt="Unilateral pulmonary infection, one infected area, lower right lung.">Lower right lung <span>↗</span></button></div>
+          <div id="error-message" class="error-message" role="alert" hidden></div>
+          <button id="run-button" class="primary-button" type="submit" disabled><span class="spinner" id="run-spinner" hidden></span><span id="run-label">Run segmentation</span><svg class="icon" id="run-arrow"><use href="#i-arrow"/></svg></button>
+          <button id="reset-button" class="reset-button" type="button"><svg class="icon"><use href="#i-reset"/></svg> Reset workspace</button>
+        </form>
+        <div class="privacy-note"><svg class="icon"><use href="#i-shield"/></svg><p>Uploads are processed locally and removed after each request. Results stay in this browser tab.</p></div>
+      </aside>
+
+      <section class="panel results-panel" aria-labelledby="results-title" aria-busy="false" id="results-panel">
+        <div class="results-heading"><div><p class="eyebrow">PREDICTION VIEWER</p><h2 id="results-title">Segmentation results</h2></div><span class="quiet-label" id="results-state">Awaiting input</span></div>
+        <div id="result-empty" class="result-empty">
+          <div class="empty-visual" aria-hidden="true"><span class="corner top-left"></span><span class="corner top-right"></span><svg class="empty-image-icon"><use href="#i-image"/></svg><span class="corner bottom-left"></span><span class="corner bottom-right"></span><span class="scan-line"></span></div>
+          <h3 id="empty-title">A clearer view starts here</h3><p id="empty-description">Upload a chest X-ray and add a text prompt.<br>Your prediction will appear in this workspace.</p>
+          <div class="empty-steps"><span>01 <strong>Original X-ray</strong></span><span>02 <strong>Binary mask</strong></span><span>03 <strong>Color overlay</strong></span></div>
+          <p class="empty-note">Only actual model predictions are displayed.</p>
+        </div>
+        <div id="result-content" hidden>
+          <div class="result-meta" id="result-meta"></div>
+          <div class="image-grid">
+            <figure><div class="result-image"><img id="original-result" alt="Original chest X-ray"></div><figcaption><span class="image-number">01</span> Original X-ray</figcaption></figure>
+            <figure><div class="result-image"><img id="mask-result" alt="Predicted binary infection-region segmentation mask"></div><figcaption><span class="image-number">02</span> Predicted mask</figcaption></figure>
+            <figure><div class="result-image"><img id="overlay-result" alt="Predicted foreground shown in the original red overlay"></div><figcaption><span class="image-number">03</span> Color overlay</figcaption></figure>
+          </div>
+          <div class="comparison-header"><div><h3>Inspect the overlay</h3><p>Move the divider to compare with the original.</p></div><button id="fullscreen-button" class="icon-button" type="button" aria-label="Open comparison in fullscreen"><svg class="icon"><use href="#i-expand"/></svg></button></div>
+          <div id="viewer" class="viewer">
+            <div id="comparison-frame" class="comparison-frame">
+              <img id="compare-original" alt="Original image in comparison viewer">
+              <div id="overlay-layer"><img id="compare-overlay" alt="Overlay image in comparison viewer"></div>
+              <span class="comparison-tag overlay-tag">OVERLAY</span><span class="comparison-tag original-tag">ORIGINAL</span>
+              <div id="comparison-divider" class="comparison-divider"><span>‹ ›</span></div>
+            </div>
+            <div class="viewer-controls"><label for="reveal">Overlay reveal <output id="reveal-value" for="reveal">50%</output><input id="reveal" type="range" min="0" max="100" value="50"></label><label for="opacity">Overlay opacity <output id="opacity-value" for="opacity">100%</output><input id="opacity" type="range" min="0" max="100" value="100"></label></div>
+          </div>
+          <div class="download-row"><a id="download-mask" class="secondary-button" download="phase2_mask.png"><svg class="icon"><use href="#i-download"/></svg> Download mask</a><a id="download-overlay" class="secondary-button" download="phase2_overlay.png"><svg class="icon"><use href="#i-download"/></svg> Download overlay</a></div>
+          <p class="result-note"><span class="foreground-dot"></span> Red indicates predicted foreground. Display controls do not change downloaded predictions.</p>
+          <p class="result-note">No ground-truth mask was supplied. Dice, IoU, accuracy and clinical confidence are not calculated.</p>
+        </div>
+        <div class="model-message" id="model-message" role="status" aria-live="polite">Checking local model availability…</div>
+      </section>
+    </div>
+    <section id="method" class="method-section"><div><p class="eyebrow">THE METHOD</p><h2>Image context. Language guidance.</h2></div><p>A ConvNeXt image encoder and CXR-BERT text encoder guide the existing LanGuideMedSeg decoder. The Flask interface reuses the validated Phase-2 pipeline and preserves input alignment. Predictions are research outputs, not diagnostic conclusions.</p></section>
+    <footer><span class="footer-brand">CHEST X-RAY <span>/</span> PHASE 02</span><p>For research and educational demonstration only. Not for clinical diagnosis.</p></footer>
+  </main>
+</body>
+</html>

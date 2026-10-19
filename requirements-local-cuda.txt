@@ -1,0 +1,7 @@
+# Match the CUDA build used to produce the existing resumable checkpoints.
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.6.0+cu124
+-r requirements-notebook.txt
+# Preserve the previous all-workflows CUDA setup, including legacy tooling.
+-r requirements-web-test.txt
+-r requirements-legacy.txt

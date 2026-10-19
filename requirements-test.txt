@@ -1,0 +1,4 @@
+# Flask/shared inference unit tests, including research export dependencies.
+-r requirements.txt
+-r requirements-research.txt
+pytest>=8,<10

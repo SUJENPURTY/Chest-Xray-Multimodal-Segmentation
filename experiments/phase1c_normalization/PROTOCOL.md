@@ -1,0 +1,21 @@
+# Phase 1C controlled normalization comparison
+
+Only normalization differs: A current BatchNorm; B fixed original epoch-18 running statistics with learnable affine parameters; C BatchNorm replaced by GroupNorm (largest divisor of channels <=32), with identical copied affine parameters. C modifies the published/released architecture; B changes training behavior only. No original source is edited.
+
+All variants load the original epoch-18 best checkpoint strictly before any replacement. All parameter values have an identical initialization hash. They use the same Phase 1B eight training images, preprocessing, no augmentation, seed 2026 and sample order; FP32 logits BCE + FP32 soft Dice, microbatch 1, accumulation 8, AdamW foreach=False, encoder LR 3e-5, decoder LR 3e-4, weight decay .01, clip norm 1, frozen text backbone eval. The tested Phase 1B attention-weight suppression is identical across all variants.
+
+Each runs exactly 2,000 microsteps / 250 optimizer updates unless a safety stop occurs. There is no early success stopping. Evaluation every 200 microsteps; immutable model+optimizer+RNG checkpoints every 400 and final, same-directory temporary write + fsync + atomic replace. Histories flush per microstep. First periodic and final checkpoints get strict reload/prediction parity/interrupted-write tests. The final matched-budget states are compared; no best-score cherry picking.
+
+The per-variant training wall safety cap is 45 minutes, peak tensor allocation guard 2,200 MiB, and checkpoint-stage resource guard checks free VRAM >=256 MiB and available commit >=512 MiB. OOM/nonfinite events stop the process, without automatic repeated retries or terminating unrelated applications. Only one Torch runtime/model runs at a time.
+
+Resume with `.venv/Scripts/python.exe -B -u experiments/phase1c_normalization/run_variant.py --variant <name> --resume`. Only committed checkpoint SHA-256 verified states are loaded. CPU optimizer scalar tensors and RNG tensors are cloned so the full mmap is released. Uncommitted incremental history is archived and rolled back. Completed variants refuse reruns. No mid-update checkpoint is presented as resumable.
+
+Initial/final fixed-weight optimization-mode vs evaluation-mode probes use inference_mode and restore BN buffers/RNG. Optimization-mode metrics are diagnostic and never substitute for evaluation-mode scores. Layer input shapes, spatial sample count, mean/variance discrepancy and buffer drift are recorded. Physical batch one BN2d includes spatial pixels; they are correlated and do not represent multiple independent images. Accumulation eight does not make the BN batch eight.
+
+Select diagnostic reliability from final **evaluation-mode** minimum training Dice, then mean Dice, considering finite gradients, memory, train/eval consistency and architecture changes. Predeclared all-sample fitting criterion: mean >=.90 and minimum >=.75 at both of the final two checks. Eight-image fitting does not establish generalization.
+
+Before any B/C training metric check was observed, a practical architecture-preservation tie-break was declared: if frozen BN passes the all-image criterion and its final minimum Dice is within 0.01 of the highest passing minimum, prefer frozen BN. This favors the existing architecture for the paper-oriented pilot without calling a tiny single-run difference decisive. It is a diagnostic heuristic, not a formal statistical equivalence margin. The raw highest-minimum variant remains recorded. No validation score enters selection.
+
+A fixed 32-image independent validation subset is chosen with seed 707 before model scoring from the existing patient-grouped validation split. Its group IDs must not intersect the training split. Score all variants initially and finally at fixed threshold .5. These limited descriptive scores are not a full validation benchmark and are not used for threshold selection or to pick a training checkpoint. No test data is loaded. No full-dataset training or pilot is authorized by this runner.
+
+All writes, caches, logs, checkpoints, pictures and reports stay under this directory. A pre/post SHA-256 inventory covers original notebooks/source/output checkpoints, previous Phase 1/1B artifacts and the 16 selected raw image/mask files. Stop after report and await user approval for any later training.

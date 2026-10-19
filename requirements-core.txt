@@ -1,0 +1,8 @@
+# Shared scientific inference dependencies; no frontend or notebook tooling.
+torch>=2.1,<3
+numpy>=1.24,<2
+Pillow>=9.4,<12
+monai==1.4.0
+transformers==4.38.2
+einops>=0.6,<1
+psutil>=5.9,<8

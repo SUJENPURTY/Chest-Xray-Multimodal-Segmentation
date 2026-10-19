@@ -1,0 +1,5 @@
+# Training, evaluation exports, annotations and research visualization.
+-r requirements-core.txt
+pandas>=1.5,<3
+matplotlib>=3.5,<4
+openpyxl>=3.1,<4
