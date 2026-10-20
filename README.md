@@ -1,185 +1,139 @@
 # Chest X-ray Multimodal Segmentation
 
-Text-guided segmentation of infected areas in chest X-rays, based on LanGuideMedSeg. An image encoder and a medical language encoder combine image features with the matching annotation prompt. The new Flask application and notebook 07 reuse the validated Phase-2 inference pipeline. Original Streamlit code, research notebooks, diagnostic experiments, and results are preserved.
+Text-guided segmentation of infection regions in chest X-rays using the LanGuideMedSeg research architecture. This repository contains research code and a local Flask interface for experimentation with image-and-prompt segmentation.
 
-**Research prototype.** The recorded Phase-2 scores are validation results used for checkpoint selection. They are not independent test results or evidence of clinical suitability. A public clone needs separately restored datasets, annotations, checkpoints, and pretrained resources; these are excluded from Git.
+> **Research prototype only.** This project is not a medical device and is not intended for diagnosis, treatment, triage, or other clinical decision-making. No clinical performance or clinical suitability has been established.
 
-## Run the Flask application
+## Project Overview
 
-After restoring the trusted resources in [CHECKPOINTS.md](docs/CHECKPOINTS.md), use Windows PowerShell:
+The project combines chest X-ray image features with a corresponding text prompt to produce a pixel-level infection probability map. It preserves research workflows alongside a Flask application and the original Streamlit application.
 
-```powershell
-Set-Location path\to\x-ray
-py -3.10 -m venv .venv  # Once, on a new checkout; keep an existing working environment.
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python run.py
-```
+Required datasets, annotation workbooks, trained checkpoints, and pretrained model weights are not bundled. Access to these resources and permission to use or redistribute them must be established independently. A Git checkout alone is not sufficient to reproduce inference or training.
 
-Open **http://127.0.0.1:5000**. Upload a **single-channel grayscale PNG/JPEG** and enter a nonempty medical/location prompt. The first request verifies and loads the selected checkpoint and can take several minutes on a small machine. Subsequent requests reuse the model. The interface shows accurate model readiness, the original image, binary mask, and unchanged red overlay, plus comparison/opacity controls, fullscreen, and PNG downloads. Threshold and preprocessing come from the research configuration; browser display controls do not change predictions.
+## Research Motivation
 
-No Dice, IoU, accuracy, or clinical confidence is invented for uploads without ground truth. RGB images are rejected rather than silently changing the Phase-2 preprocessing. Uploaded bytes are processed using temporary generated paths and removed after each request. Results stay in the tab unless downloaded.
+This research explores whether language prompts describing a finding or location can guide segmentation of infected regions in chest radiographs. The work builds on LanGuideMedSeg and the QaTa-COV19 research setting. It does not establish patient-independent generalization, performance on unconstrained prompts, or clinical utility.
 
-The displayed allowance is **12 MiB per image** by default (`WEB_MAX_UPLOAD_MB`). Flask and Waitress permit an additional 64 KiB for multipart headers and the bounded prompt; the API separately enforces the exact image-byte limit. Selecting an invalid replacement clears the previous image, prediction, and download links before validation.
-
-![Actual Flask empty workspace during checkpoint initialization](docs/assets/flask_workspace.png)
-
-This screenshot was captured from the running application; it contains no medical image. Actual prediction screenshots remain local pending redistribution review. See [Flask application documentation](docs/FLASK_APPLICATION.md) for the API, CPU/CUDA selection, upload limits, restoration, tests, and deployment limitations. The original Streamlit application remains at `app.py`; it has not been removed or converted in place.
-
-## Method and architecture
+## Model Architecture
 
 ```text
 Chest X-ray -> ConvNeXt-Tiny -> multi-scale visual features --+
-                                                           +-> GuideDecoder -> sigmoid infection map
+                                                           +-> GuideDecoder -> infection probability map
 Text prompt -> CXR-BERT -> token features ------------------+
 ```
 
-The decoder uses visual attention and text-guided cross-attention, followed by upsampling to a one-channel probability map. The text backbone is frozen. Images use the existing MONAI preprocessing at 224 x 224; prompts are tokenized to 24 tokens. Display rendering converts MONAI/PIL axis conventions explicitly and resizes probabilities before native-resolution display thresholding. Reported metrics below use the 224 x 224 model grid.
+The decoder combines visual features with text-guided cross-attention and upsamples to a one-channel probability map. In the documented Phase-2 workflow, the text backbone is frozen. Images use the existing MONAI preprocessing at 224 x 224; prompts are tokenized to a maximum of 24 tokens. Evaluation metrics are calculated on the model grid. Display rendering resizes probabilities for visualization and is not a new evaluation pass.
 
-The Phase-2 pilot continued from the original epoch-18 checkpoint for two epochs on 5,722 training images and 1,423 validation images. Its protocol uses FP32, batch size 1, gradient accumulation 8, no augmentation, frozen decoder BatchNorm running statistics with trainable affine parameters, and a frozen text backbone in evaluation mode. The recorded loss is equal-weight BCEWithLogits and sigmoid soft Dice. The selected epoch maximizes full-validation macro Dice. See [the preserved protocol](experiments/phase2_pilot/PROTOCOL.md) and [configuration](experiments/phase2_pilot/config.json) for learning rates, guards, and checkpoint semantics.
+## Technologies Used
 
-## Structure
+- Python 3.10
+- PyTorch and MONAI
+- Hugging Face Transformers, ConvNeXt-Tiny, and CXR-BERT
+- Flask and Waitress for the web application
+- NumPy, Pillow, pandas, Matplotlib, and openpyxl for research workflows
+- pytest for automated tests
+
+The requirement files contain version ranges and platform-specific options; they are not a complete cross-platform lockfile. See the installation notes below and choose a compatible PyTorch build for your hardware.
+
+## Project Structure
 
 ```text
-notebooks/       seven local research notebooks, ignored pending publication review
-src/             shared data, model, training, and inference implementations
-webapp/          Flask factory, routes, Phase-2 service, templates and static assets
-run.py           local Flask/Waitress application entry point
-scripts/         training/evaluation/inference, annotation preparation, verification
-experiments/     experiment programs, configurations, protocols; raw records local
-results/         aggregate results without patient-level records or medical images
-docs/            dataset, checkpoint, reproducibility, and cleanup documentation
-app.py           hash-verified original-checkpoint Streamlit application
-outputs/         ignored local outputs, verification runs, preservation inventory
+src/             Shared data, model, training, and inference implementation
+webapp/          Flask application, routes, services, templates, and static assets
+run.py           Flask/Waitress entry point
+app.py           Preserved Streamlit application
+scripts/         Training, evaluation, inference, and verification utilities
+experiments/     Research experiment code, configurations, and protocols
+tests/           Unit and integration tests
+docs/            Dataset, checkpoint, application, and reproducibility documentation
 ```
 
-Local `Project/`, `_qata_compatible/`, `pretrained/`, `text_annotation/`, `archive/`, and `reference_papers/` are retained on disk and excluded from the proposed Git payload. `presentation/` is also excluded if restored; that root folder was absent in the current cleanup inventory. Existing paths have been preserved to avoid breaking experiment lineage and model resolution.
+Research notebooks are not included in this repository snapshot. No notebook links are provided. Do not add notebook copies or generated output without separate privacy, permissions, attribution, and research-owner review.
 
 ## Installation
 
-The observed working environment uses Python 3.10.20, PyTorch 2.6.0+cu124, MONAI 1.4.0, Transformers 4.38.2, and NumPy 1.26.4. See [reproducibility notes](docs/REPRODUCIBILITY.md) for exact observed package versions and verification limits. Dependency ranges are not a complete environment lock. Choose the appropriate PyTorch build before installing the selected group.
-
-| Requirements file | Workflow |
-| --- | --- |
-| `requirements-core.txt` | Shared scientific inference libraries |
-| `requirements.txt` | Flask runtime and Waitress, including core |
-| `requirements-research.txt` | Training, evaluation exports, annotations and plotting |
-| `requirements-notebook.txt` | Research dependencies plus Jupyter execution and widgets |
-| `requirements-test.txt` | Flask/shared research unit tests and pytest |
-| `requirements-web-test.txt` | Unit tests plus HTTP/browser validation clients |
-| `requirements-legacy.txt` | Optional retained Streamlit app, including its Matplotlib import |
-| `requirements-local-cuda.txt` | Existing CUDA 12.4 recipe plus all workflow groups |
-
-`requirements.txt` now installs the Flask runtime; the older combined environment remains available through `requirements-local-cuda.txt`. For a portable combined setup install the notebook, web-test, and legacy files together. No installed packages are removed by this separation.
-
-Use `python -m pip install -c constraints-observed.txt -r requirements.txt` to constrain the Flask setup to observed direct-package versions. The snapshot records the tested CUDA build but leaves platform/index selection explicit; it does not lock all transitive dependencies or certify a fresh install. Apply the same constraints to other groups as needed.
-
-From the repository root, create and select a project `.venv`:
+Use Python 3.10 and select a PyTorch build appropriate to your operating system and device. For the Flask runtime on Windows PowerShell:
 
 ```powershell
 py -3.10 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements-notebook.txt
+python -m pip install -r requirements.txt
 ```
 
-Choose a PyTorch build appropriate to your platform before installing the rest. For the Windows CUDA 12.4 environment used here, the existing recipe is:
+On POSIX systems, create and activate a Python 3.10 virtual environment using `python3.10 -m venv .venv` and `source .venv/bin/activate`, then install the requirements. Choose/install a compatible PyTorch build as appropriate for your platform before running the application.
+
+`requirements-local-cuda.txt` is the existing recipe for the observed Windows CUDA 12.4 environment; it selects a CUDA-specific PyTorch index and includes the broader notebook, web-test, and legacy requirement groups. It is not a portable environment lock. A fresh-clone installation has not been verified for every operating system or accelerator.
+
+## Flask Web Application
+
+The Flask interface accepts a single-channel grayscale PNG or JPEG and a nonempty text prompt. It returns the input image, binary mask, and overlay. Uploads use temporary files that are removed after each request. The application does not report Dice, IoU, accuracy, or clinical confidence for an uploaded image without ground truth.
+
+After restoring authorized runtime resources and resolving the model's intended-use terms, start the local application:
 
 ```powershell
-python -m pip install -r requirements-local-cuda.txt
+python run.py
 ```
 
-On POSIX systems, use `python3.10 -m venv .venv` and `source .venv/bin/activate`. These are setup instructions; this cleanup did not install dependencies or verify a fresh-environment installation. Open notebooks in your Jupyter frontend or VS Code and select this `.venv`. Notebook 07 explicitly checks the interpreter path. If your frontend needs a registered kernel, run `python -m ipykernel install --user --name xray-e-drive --display-name "Chest X-ray (.venv)"` from that environment. The isolated verifier does not require this user-level registration.
+The default address is `http://127.0.0.1:5000`. The application is configured for a local research demonstration; remote deployment, authentication, TLS, and a clinical environment have not been validated. The current CXR-BERT model card says deployed use is outside its intended scope. Obtain guidance from the model owner and institution before presenting this application as suitable for deployment.
 
-## Restore the inputs first
+The original Streamlit application remains available through `app.py` and the optional `requirements-legacy.txt` group. This README does not change either application's behavior.
 
-1. Obtain QaTa-COV19-v2 images, masks, and text workbooks through an authorized source; follow [dataset instructions](docs/DATASET.md).
-2. Restore the original or Phase-2 checkpoint bundle appropriate to the workflow; follow [checkpoint instructions](docs/CHECKPOINTS.md).
-3. Restore complete ConvNeXt and CXR-BERT resources before the offline Phase-2 notebook runs. Existing home-directory Hugging Face caches are external dependencies.
+## Inference Workflow
 
-No public download location for the trained checkpoints or private runtime bundle has been approved. Exact reproduction from a Git-only clone is therefore not yet available. Do not substitute a similarly named checkpoint or regenerate provenance records to bypass hash checks.
+1. Obtain authorized access to the compatible dataset, annotation manifests, checkpoint, and complete pretrained resources required by the selected workflow.
+2. Restore the exact expected local resources. No public checkpoint or complete runtime bundle is provided here.
+3. Start the Flask application locally.
+4. Submit a supported grayscale image with a nonempty prompt.
+5. Inspect the generated mask and overlay as research visualizations only.
 
-## Notebooks
+The existing implementation preserves its model, preprocessing, threshold, and rendering behavior. Do not substitute checkpoints or regenerate provenance files to bypass validation. Checkpoint files are trusted PyTorch pickle artifacts; load only resources obtained from a source you trust.
 
-| Notebook | Role |
-| --- | --- |
-| [01](notebooks/01_dataset_setup_and_eda.ipynb) | Dataset preparation and exploratory analysis |
-| [02](notebooks/02_multimodal_preprocessing.ipynb) | Image, mask, and text preprocessing |
-| [03](notebooks/03_model_architecture.ipynb) | Architecture and component inspection |
-| [04](notebooks/04_training_pipeline.ipynb) | Original training and diagnostic evidence |
-| [05](notebooks/05_evaluation_and_results.ipynb) | Original held-out evaluation |
-| [06](notebooks/06_inference_and_visualization.ipynb) | Original-checkpoint inference and visualization |
-| [07](notebooks/07_phase2_live_inference.ipynb) | Selected Phase-2 checkpoint, live prompt controls, verified validation evidence |
+## Evaluation Metrics
 
-All seven notebooks and the earlier preservation copies remain local. The Phase-1 review found notebooks 01–06 byte-identical to the prior inventory. Notebook 07 initially differed in kernel metadata; a concurrent save later inserted an empty Markdown cell, preserving all existing cells and outputs. This task did not write to the original notebooks, and all observed versions were preserved. See [the Phase-1 provenance and publication report](docs/PUBLICATION_PHASE1.md). The links above refer to local originals; these notebooks are deliberately absent from the proposed Git payload until reviewed publication copies are approved.
+The project reports Dice, intersection over union (IoU), precision, recall, and pixel accuracy. Image-wise macro means average per-image metrics; dataset-global values pool pixel-level counts. They are distinct summaries and should not be compared as if they were the same statistic. The reported Phase-2 metrics use 224 x 224 masks and threshold 0.5.
 
-Earlier notebooks include machine-local paths; notebook 01 can recreate a compatibility dataset, and notebook 04 performs optimization and writes outputs. Inspect them before running cells. Bulk execution is not part of setup or verification. Private publication drafts remove outputs, execution counts, attachments and metadata while retaining every cell source. They are unexecuted and remain blocked from publication pending source/privacy and redistribution review. No medical-image publication is authorized by this preparation.
+## Results
 
-## Phase-2 live inference
-
-After restoring the documented bundle, use the project interpreter to verify an isolated copy:
-
-```powershell
-python scripts/verify_phase2_notebook.py
-```
-
-This runner creates a new folder under `outputs/verification/`, redirects notebook output writes there, performs fresh sample predictions, verifies the saved validation cache against every input hash, and tests two real prediction-button clicks. It does not retrain, overwrite the original notebook, or recompute full validation. A missing or inconsistent cache causes failure.
-
-For interactive use, open notebook 07, select `.venv`, and run its cells after restoration. Use the sample index and nonempty text prompt, then click **Predict segmentation**. The widget replaces its prior result with one image per click. Direct execution of the original notebook writes to its normal `outputs/run/phase2_live_inference/` folder; use the isolated runner to preserve an existing final output set.
-
-Optional PowerShell settings are `$env:PHASE2_DEVICE = "cuda"` (or `"cpu"`) and `$env:PHASE2_DATA_ROOT = "path/to/QaTa-COV19-v2"`. The Phase-2 loader has fixed provenance paths; the original CLI's `MODEL_CHECKPOINT` and `TRAIN_CSV` overrides do not redirect it. CPU execution is available in code but has not been benchmarked by this cleanup.
-
-## Recorded results
-
-The Phase-2 epoch-2 checkpoint was selected on the same validation partition reported here, at threshold 0.5, FP32, 224 x 224. The aggregate below is derived from the preserved 1,423-row count table, with macro and pixel-pooled results kept separate.
+The Phase-2 epoch-2 checkpoint was selected using the same 1,423-image validation partition summarized below. **These are validation-set selection results, not an independent test evaluation.** Values are reproduced as recorded; no new evaluation was run for this README.
 
 | Metric | Image-wise mean | Dataset-global |
-| --- | ---: | ---: |
+|---|---:|---:|
 | Dice | 0.819383 | 0.884882 |
 | IoU | 0.721275 | 0.793532 |
 | Precision | 0.803224 | 0.859318 |
 | Recall | 0.873062 | 0.912014 |
 | Pixel accuracy | 0.970939 | 0.970939 |
 
-See [the aggregate result](results/phase2_validation_summary.json) for counts, hashes, and source provenance. Scores are on resized masks; native-resolution overlays are illustrations. Foreground area is not a lung-normalized disease-severity score. Prompt modifications use ground truth belonging to the original annotation prompt, so their displayed scores are exploratory.
+For context only, the original epoch-18 checkpoint recorded macro Dice **0.185754** and macro IoU **0.106600** on a separate 2,113-image test split. This is a different checkpoint and population and is not a Phase-2 test result; the values are not a direct like-for-like comparison. No independent Phase-2 test score is claimed.
 
-For context, the **original epoch-18 checkpoint**, on the separate 2,113-image test split, recorded macro Dice **0.185754** and macro IoU **0.106600** in `outputs/run/metrics/test_metrics.json`. This is a different checkpoint and population. No Phase-2 held-out test evaluation is claimed. Threshold calibration and the prepared Phase-3 programs are separate experiments; Phase-3 is not presented as completed.
+These metrics do not demonstrate clinical performance, patient-level independence, or generalization beyond the evaluated data and prompts. Their public presentation remains subject to research-owner approval.
 
-The notebooks retain example visualizations locally. No additional medical-image gallery is published during cleanup because redistribution and de-identification review remain pending.
+## Reproducibility Notes
 
-## Original training, evaluation, CLI, and application
+- The Phase-2 pilot continued from the original epoch-18 checkpoint for two epochs, using 5,722 training images and 1,423 validation images.
+- The recorded protocol uses FP32, microbatch size 1, gradient accumulation 8, no augmentation, frozen decoder BatchNorm running statistics with trainable affine parameters, and a frozen text backbone in evaluation mode.
+- The selected epoch maximized full-validation macro Dice. The validation partition is therefore a model-selection partition, not an independent test set.
+- Data, annotations, checkpoints, and complete pretrained resources are external prerequisites and are not included. A Git-only clone cannot reproduce the recorded results.
+- Dependency ranges do not lock the full transitive environment. Clean-clone installation and reproduction have not been demonstrated for every platform.
+- The recorded full test suite had 36 passing tests and 1 failure; the remaining failure concerns a stale encoder-checkpointing expectation. Do not infer that the full suite passes.
 
-These commands use the **original `CLOUD_LANGUIDE_BINARY_FIXED_V1` checkpoint format**, not the Phase-2 `PHASE2_FROZEN_BN_PILOT_V1` format. Restore the original checkpoint and manifests first.
+## Dataset and Model Availability
 
-```powershell
-python scripts/create_languide_annotations.py
-$env:TRAIN_CSV = (Resolve-Path outputs/run/prepared_annotations/train.csv).Path
-$env:TEST_CSV = (Resolve-Path outputs/run/prepared_annotations/test.csv).Path
-python scripts/train.py --data-root data/QaTa-COV19-v2 --output-dir outputs/new_training --epochs 20 --batch-size 1 --num-workers 0
-python scripts/evaluate.py --data-root data/QaTa-COV19-v2 --checkpoint outputs/run/checkpoints/best_dice.ckpt --output-dir outputs/original_evaluation
-python scripts/infer.py --image path/to/xray.png --prompt "Pulmonary infection." --checkpoint outputs/run/checkpoints/best_dice.ckpt --output-dir outputs/example
-python -m pip install -r requirements-legacy.txt  # Optional original app only.
-python -m streamlit run app.py
-```
+No dataset images, masks, annotation workbooks, checkpoints, or pretrained weights are included. The current QaTa Kaggle page displays CC BY-NC-SA 3.0 IGO and requests citation, but the rights and provenance of the exact locally used version and its derivatives have not been independently verified. Rights for separately hosted text annotations are also unverified.
 
-Training is optional, resource intensive, and was not run during cleanup. `DATA_ROOT`, `OUTPUT_DIR`, `TRAIN_CSV`, `TEST_CSV`, and `MODEL_CHECKPOINT` configure the original pipeline. Annotation creation requires the original workbooks and generates manifests; byte-identical Phase-2 reproduction requires the preserved manifest, not an arbitrary regenerated CSV.
+The code references `facebook/convnext-tiny-224` and `microsoft/BiomedVLP-CXR-BERT-specialized`. Runtime revisions are not pinned to immutable identifiers. The current CXR-BERT model card describes research/reproducibility use and states deployed use is out of scope. Verify the applicable licenses, revisions, intended-use terms, data permissions, and institutional approvals before using or redistributing these resources.
 
-The verification subset for the Flask and shared inference code is:
+## Limitations
 
-```powershell
-python -m pytest tests/test_flask_app.py tests/test_pipeline.py tests/test_phase2_inference.py -q
-python scripts/verify_restoration.py --workflow phase2
-python scripts/validate_flask_app.py
-python scripts/validate_flask_browser.py
-```
+- This is research software, not a validated medical device or clinical decision-support system.
+- No clinical performance or independent Phase-2 test result is established.
+- Filename-based grouping does not by itself prove patient-level independence.
+- Generalization to arbitrary prompts and populations has not been established.
+- Dataset, annotation, image, checkpoint, and pretrained-model redistribution permissions are not confirmed by the repository's code license.
+- Full reproduction requires external resources and a compatible environment.
 
-`tests/test_memory_optimizations.py` is retained for review: its encoder checkpointing assertion no longer matches the current architecture. A green run of the subset does not establish that the entire test suite is green. Historical presentation and execution utilities also have older assumptions; consult [reproducibility notes](docs/REPRODUCIBILITY.md) before invoking them.
+## Acknowledgements
 
-The live and browser helpers require the running Flask server, private validated sample and saved reference outputs. Optional verification dependencies are listed in `requirements-web-test.txt`; browser tests use an installed Chrome/Edge. `python scripts/validate_flask_app.py --cpu` runs a separate real CPU validation and can be memory intensive. The Flask route tests use explicit fixtures and are separate from real model/parity evidence.
+This work builds on Zhong et al., “Ariadne's Thread: Using Text Prompts to Improve Segmentation of Infected Areas from Chest X-ray Images,” MICCAI 2023 ([paper](https://arxiv.org/abs/2307.03942), [LanGuideMedSeg source](https://github.com/Junelin2333/LanGuideMedSeg-MICCAI2023)). Related resources include the [QaTa-COV19 dataset page](https://www.kaggle.com/datasets/aysendegerli/qatacov19-dataset), Liu et al.'s [ConvNeXt paper](https://arxiv.org/abs/2201.03545), Boecking et al.'s [CXR-BERT paper](https://arxiv.org/abs/2204.09817), and [MONAI](https://arxiv.org/abs/2211.02701). Confirm which dataset citation applies to the exact local version used.
 
-The [Phase-1 report](docs/PUBLICATION_PHASE1.md) records current tests, per-file changes, unresolved publication gates, and a proposed cleanup list. Preparation does not commit, push, authorize medical-image distribution, or delete local artifacts.
-
-## Attribution and license
-
-Based on Yi Zhong, Mengqiu Xu, Kongming Liang, Kaixin Chen, and Ming Wu, *Ariadne's Thread: Using Text Prompts to Improve Segmentation of Infected Areas from Chest X-ray Images*, MICCAI 2023, pp. 724-733. See the [paper](https://arxiv.org/abs/2307.03942) and [original code](https://github.com/Junelin2333/LanGuideMedSeg-MICCAI2023).
-
-The vendored architecture files `src/models/legacy_model.py` and `legacy_layers.py` are required for checkpoint compatibility. The existing [GPL-3.0 license](LICENSE) is preserved. Dataset, pretrained-model, paper, and presentation redistribution terms require separate review; the project license does not automatically license those materials.
+The repository includes a GPL-3.0 license. Confirm project-wide ownership, applicable upstream notices, and the scope of that license before redistribution. The code license does not grant rights to datasets, annotation workbooks, medical images, pretrained weights, or research results. Confirm which QaTa citation applies to the exact dataset version used.

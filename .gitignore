@@ -81,6 +81,11 @@ kernel-*.json
 /outputs/*
 !/outputs/.gitkeep
 /checkpoints/
+/results/phase2_validation_summary.json
+/docs/assets/flask_workspace.png
+/docs/FLASK_MIGRATION_REPORT.md
+/docs/GITHUB_CLEANUP_REVIEW.md
+/docs/PUBLICATION_PHASE1.md
 *.pth
 *.pt
 *.ckpt

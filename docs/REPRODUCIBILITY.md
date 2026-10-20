@@ -9,13 +9,16 @@ intentionally excluded from Git. Follow [DATASET.md](DATASET.md) and
 [CHECKPOINTS.md](CHECKPOINTS.md) before attempting execution. A fresh-machine,
 Git-only reproduction has not been demonstrated.
 
-The latest preparation findings and test results are in
-[PUBLICATION_PHASE1.md](PUBLICATION_PHASE1.md). Earlier verification sections
-below describe their historical runs. The latest inspection found notebook 07
+Earlier verification sections below describe their historical runs. The latest inspection found notebook 07
 already differed from its preservation hash in kernel metadata only. A concurrent
 save subsequently inserted one empty Markdown cell; all existing cells and outputs
 remain identical. No original notebook was written by this task, and all observed
 versions are preserved.
+
+Datasets, annotations, checkpoints, and pretrained weights are external and are
+not included. Dependency ranges do not lock every transitive package, and a fresh
+machine installation has not been verified. A Git-only clone therefore cannot
+reproduce the training or inference workflows.
 
 The new Flask frontend reuses the preserved Phase-2 engine. Its setup, API, real
 reference validators, browser checks and CPU verification commands are documented
@@ -135,9 +138,10 @@ files. If a real root repository exists, tracked files are audited separately:
 - Text annotations encode finding and location information; generalization to
   unconstrained prompts or clinical deployment has not been established.
 
-The public aggregate in `results/phase2_validation_summary.json` omits filenames,
-prompts, medical images, hardware process snapshots, and local absolute paths.
-It is a derived copy; the original validation CSV and summary remain unchanged.
+The Phase-2 values documented in the README are aggregate validation results
+from the checkpoint-selection partition, not an independent test evaluation or
+clinical performance claim. The detailed aggregate file and per-image records
+are not included in the public repository.
 
 ## Historical tools and notebook cautions
 
