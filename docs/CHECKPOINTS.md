@@ -75,7 +75,7 @@ The cleanup has not modified or converted weights.
 
 ## Verified restoration manifest
 
-[resource_checksums.json](resource_checksums.json) records freshly computed
+The checksum manifest is retained privately and is not included in the public repository. It records freshly computed
 SHA-256 values and sizes for 19 retained files on 2026-10-19: the Phase-2 bundle,
 original epoch-18 checkpoint, and complete observed ConvNeXt/CXR-BERT resource
 files. It contains fingerprints only; no weights, annotations or patient images.
@@ -86,9 +86,9 @@ Verify restored bytes without loading pickle files, importing Torch, or making
 network requests:
 
 ```powershell
-python scripts/verify_restoration.py --workflow phase2
-python scripts/verify_restoration.py --workflow original
-python scripts/verify_restoration.py --workflow all
+python scripts/verify_restoration.py --workflow phase2 --manifest path/to/your/private/resource_checksums.json
+python scripts/verify_restoration.py --workflow original --manifest path/to/your/private/resource_checksums.json
+python scripts/verify_restoration.py --workflow all --manifest path/to/your/private/resource_checksums.json
 ```
 
 The default checks the full Phase-2 notebook bundle and pretrained resources;

@@ -43,6 +43,11 @@ def main():
     parser.add_argument("--workflow", choices=("phase2", "original", "all"), default="phase2")
     parser.add_argument("--convnext-dir", type=Path, help="Complete trusted ConvNeXt snapshot")
     parser.add_argument("--cxrbert-dir", type=Path, help="Complete trusted CXR-BERT resource folder")
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        help="Path to a local resource checksum manifest",
+    )
     args = parser.parse_args()
     bundled = ROOT / "Project/LanGuideMedSeg-MICCAI2023/lib/BiomedVLP-CXR-BERT-specialized-official"
     bases = {
@@ -51,7 +56,13 @@ def main():
         "cxrbert": args.cxrbert_dir or (bundled if bundled.is_dir() else
                                       cached_snapshot("microsoft/BiomedVLP-CXR-BERT-specialized")),
     }
-    manifest = json.loads((ROOT / "docs/resource_checksums.json").read_text(encoding="utf-8"))
+    manifest_path = args.manifest or (ROOT / "docs/resource_checksums.json")
+    if not manifest_path.is_file():
+        parser.error(
+            f"Checksum manifest not found: {manifest_path}. "
+            "Provide a private local manifest using --manifest PATH."
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     failures, checked = [], 0
     for record in manifest["files"]:
         if args.workflow != "all" and record["workflow"] not in (args.workflow, "pretrained"):
